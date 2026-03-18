@@ -115,16 +115,44 @@ if not location_summary.empty:
         location_summary["Total"]
     ) * 100
 
-    # Copy for charts
     location_chart = location_summary.copy()
 
-    # Format for table (2 decimals)
-    location_summary["Compliance %"] = location_summary["Compliance %"].map(lambda x: f"{x:.2f}")
+    # -----------------------------------
+    # Performance Button Function
+    # -----------------------------------
+    def performance_button(val):
 
-    st.dataframe(location_summary)
+        if val >= 90:
+            color = "#28a745"
+        else:
+            color = "#dc3545"
+
+        return f"""
+        <div style="
+            background-color:{color};
+            color:white;
+            padding:6px;
+            border-radius:8px;
+            text-align:center;
+            font-weight:bold;">
+            {val:.2f}%
+        </div>
+        """
+
+    location_summary["Performance"] = location_summary["Compliance %"].apply(performance_button)
+
+    # Table for display
+    display_df = location_summary[
+        ["LOC_NURSE_UNIT", "Total", "Compliant", "Performance"]
+    ]
+
+    st.markdown(
+        display_df.to_html(escape=False, index=False),
+        unsafe_allow_html=True
+    )
 
     # -----------------------------------
-    # Color coding
+    # Color coding for chart
     # -----------------------------------
     colors = [
         "green" if val >= 90 else "red"
@@ -142,7 +170,6 @@ if not location_summary.empty:
         color=colors
     )
 
-    # Target line at 90%
     ax1.axhline(
         y=90,
         color="blue",
@@ -207,7 +234,6 @@ for location in monthly_location_summary["LOC_NURSE_UNIT"].unique():
         label=location
     )
 
-# Target line for compliance
 ax2.axhline(
     y=90,
     color="blue",
@@ -222,7 +248,6 @@ ax2.set_title("Monthly Compliance Trend by Location")
 
 plt.xticks(rotation=45)
 
-# Move legend outside
 ax2.legend(
     title="Location",
     bbox_to_anchor=(1.02, 1),
