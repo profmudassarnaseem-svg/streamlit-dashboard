@@ -11,7 +11,7 @@ st.title("🩸 Blood Sample Compliance Dashboard")
 # -----------------------------------
 # File Path
 # -----------------------------------
-file1 = r"Final_Blood_ReportB.xlsx"
+file1 = "Final_Blood_ReportB.xlsx"
 
 # -----------------------------------
 # Read Excel
@@ -22,7 +22,6 @@ df = pd.read_excel(file1)
 # Data Cleaning
 # -----------------------------------
 df["COLLECT_DT_TM"] = df["COLLECT_DT_TM"].astype(str)
-
 df["COLLECT_DT_TM"] = df["COLLECT_DT_TM"].str.replace(r"\.\d+", "", regex=True)
 
 df["COLLECT_DT_TM"] = pd.to_datetime(
@@ -34,7 +33,6 @@ df["COLLECT_DT_TM"] = pd.to_datetime(
 df = df.dropna(subset=["COLLECT_DT_TM"])
 
 df["Month"] = df["COLLECT_DT_TM"].dt.to_period("M").astype(str)
-
 df["Month_Date"] = df["COLLECT_DT_TM"].dt.to_period("M").dt.to_timestamp()
 
 df["Volume_ml"] = (
@@ -51,13 +49,13 @@ st.sidebar.header("Filters")
 
 locations = st.sidebar.multiselect(
     "Select Location(s)",
-    options=sorted(df["LOC_NURSE_UNIT"].unique()),
+    sorted(df["LOC_NURSE_UNIT"].unique()),
     default=sorted(df["LOC_NURSE_UNIT"].unique())
 )
 
 selected_month = st.sidebar.selectbox(
     "Select Month",
-    options=sorted(df["Month"].unique())
+    sorted(df["Month"].unique())
 )
 
 # -----------------------------------
@@ -110,58 +108,39 @@ location_summary = (
 
 if not location_summary.empty:
 
+    # Compliance calculation
     location_summary["Compliance %"] = (
         location_summary["Compliant"] /
         location_summary["Total"]
     ) * 100
 
+    # Chart copy
     location_chart = location_summary.copy()
 
     # -----------------------------------
-    # Performance Button Function
+    # Display Table with Buttons
     # -----------------------------------
-    def performance_button(val):
+    for _, row in location_summary.iterrows():
 
-        if val >= 90:
-            color = "#28a745"
+        col1, col2, col3, col4 = st.columns([3,1,1,1])
+
+        col1.write(row["LOC_NURSE_UNIT"])
+        col2.write(int(row["Total"]))
+        col3.write(int(row["Compliant"]))
+
+        if row["Compliance %"] >= 90:
+            col4.success(f"{row['Compliance %']:.2f}%")
         else:
-            color = "#dc3545"
-
-        return f"""
-        <div style="
-            background-color:{color};
-            color:white;
-            padding:6px;
-            border-radius:8px;
-            text-align:center;
-            font-weight:bold;">
-            {val:.2f}%
-        </div>
-        """
-
-    location_summary["Performance"] = location_summary["Compliance %"].apply(performance_button)
-
-    # Table for display
-    display_df = location_summary[
-        ["LOC_NURSE_UNIT", "Total", "Compliant", "Performance"]
-    ]
-
-    st.markdown(
-        display_df.to_html(escape=False, index=False),
-        unsafe_allow_html=True
-    )
+            col4.error(f"{row['Compliance %']:.2f}%")
 
     # -----------------------------------
-    # Color coding for chart
+    # Bar Chart
     # -----------------------------------
     colors = [
         "green" if val >= 90 else "red"
         for val in location_chart["Compliance %"]
     ]
 
-    # -----------------------------------
-    # Bar Chart
-    # -----------------------------------
     fig1, ax1 = plt.subplots(figsize=(10,6))
 
     ax1.bar(
@@ -181,9 +160,7 @@ if not location_summary.empty:
     ax1.set_ylabel("Compliance %")
     ax1.set_title("Compliance Rate per Location")
 
-    plt.xticks(rotation=45, ha="right")
-    plt.subplots_adjust(bottom=0.30)
-
+    plt.xticks(rotation=45)
     ax1.legend()
 
     st.pyplot(fig1)
